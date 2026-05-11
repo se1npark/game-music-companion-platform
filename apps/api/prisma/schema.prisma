@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  displayName        String
+  region             String              @default("Australia/Sydney")
+  createdAt          DateTime            @default(now())
+  gameLibrary        GameLibraryEntry[]
+  recommendations    Recommendation[]
+  serviceConnections ServiceConnection[]
+}
+
+model Game {
+  id                    String             @id @default(cuid())
+  rawgId                Int?               @unique
+  steamAppId            Int?               @unique
+  title                 String
+  slug                  String             @unique
+  genres                String[]
+  platforms             String[]
+  releaseYear           Int?
+  averageSessionMinutes Int
+  energyProfile         Int
+  moodTags              String[]
+  libraryEntries        GameLibraryEntry[]
+  recommendations       Recommendation[]
+}
+
+model GameLibraryEntry {
+  id                   String   @id @default(cuid())
+  userId               String
+  gameId               String
+  hoursPlayed          Int
+  lastPlayedAt         DateTime
+  achievementsUnlocked Int      @default(0)
+  totalAchievements    Int      @default(0)
+  preferredMood        String
+  game                 Game     @relation(fields: [gameId], references: [id])
+  user                 User     @relation(fields: [userId], references: [id])
+}
+
+model Track {
+  id          String          @id @default(cuid())
+  spotifyUri  String?         @unique
+  title       String
+  artist      String
+  album       String
+  bpm         Int
+  energy      Int
+  valence     Int
+  genres      String[]
+  moodTags    String[]
+  playlistItems PlaylistItem[]
+}
+
+model Recommendation {
+  id            String     @id @default(cuid())
+  userId        String
+  gameId        String
+  prompt        String
+  inferredMood  String
+  sessionStyle  String
+  timeOfDay     String
+  intensity     Int
+  explanation   String
+  createdAt     DateTime   @default(now())
+  game          Game       @relation(fields: [gameId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+  playlist      Playlist?
+}
+
+model Playlist {
+  id               String         @id @default(cuid())
+  userId           String
+  recommendationId String         @unique
+  spotifyPlaylistId String?
+  title            String
+  createdAt        DateTime       @default(now())
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id])
+  items            PlaylistItem[]
+}
+
+model PlaylistItem {
+  id         String   @id @default(cuid())
+  playlistId String
+  trackId    String
+  position   Int
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  track      Track    @relation(fields: [trackId], references: [id])
+}
+
+model ServiceConnection {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String
+  externalId   String?
+  accessScope  String[]
+  connectedAt  DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider])
+}
